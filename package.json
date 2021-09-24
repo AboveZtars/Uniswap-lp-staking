@@ -1,7 +1,7 @@
 {
-  "name": "hardhat-starter-kit-aboveztars",
+  "name": "uniswaplpstaking",
   "version": "1.0.0",
-  "description": "Starter kit for Hardhat Development ",
+  "description": "Uniswap LP Staking",
   "main": "index.js",
   "scripts": {
     "test": "hardhat test",
