@@ -1,7 +1,17 @@
-# Hardhat Starter Kit with ethers 
+# Uniswap LP Staking
 
-This repo have all the basic tools I use to start a new project.
+This is the Fourth Assignment for EYSS Academy.
 
+## Before test
+
+Run `npm install` to install all dependencies.
+
+## Test
+For testing use:
+```
+npm run test 
+```
+## Hardhat 
 ```shell
 npx hardhat accounts
 npx hardhat compile
