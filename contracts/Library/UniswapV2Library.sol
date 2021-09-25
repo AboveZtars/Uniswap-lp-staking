@@ -24,7 +24,7 @@ library UniswapV2Library {
                 hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
             )));
         uint160 something2 =  uint160(something);
-        address pair = address(something2);
+        pair = address(something2);
     }
 
     // fetches and sorts the reserves for a pair
