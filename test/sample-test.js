@@ -8,6 +8,7 @@ const DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const LINK = "0x514910771AF9Ca656af840dff83E8264EcF986CA";
+const ETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; //This is WETH
 const source1 = "Uniswap_V3";
 const source2 = "Uniswap_V3";
 
@@ -118,9 +119,12 @@ describe("Just a test", function () {
     console.log("The amount of DAI: " + amountA);
     console.log("The amount of LINK: " + amountB);    
   });
-  it("Should just work", async function () {
+  it("Should just work for Tokens", async function () {
     await UniswapLPStaking.addAndStake(DAI,LINK,"500000000000000000000",0);
-    console.log("Apparently passed");
-       
+    console.log("Apparently passed");    
+  });
+  it("Should just work for Ethers", async function () {
+    await UniswapLPStaking.addAndStake(ETH, DAI, ethers.utils.parseEther("1"), 0, { value: ethers.utils.parseEther("1") });
+    console.log("Apparently passed");    
   });
 });

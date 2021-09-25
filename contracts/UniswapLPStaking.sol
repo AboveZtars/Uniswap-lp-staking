@@ -20,6 +20,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   using SafeERC20Upgradeable for IERC20Upgradeable;
   address private constant FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
   address private constant ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+  address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
   IUniswapV2Router02 public constant uniswapRouterV2 =
     IUniswapV2Router02(ROUTER);
   
@@ -32,9 +33,33 @@ contract UniswapLPStaking is OwnableUpgradeable {
     address _tokenB,
     uint256 _amountA,
     uint256 _amountB
-  ) public {
+  ) public payable {
     ///Liquidity
-
+    address _token;
+    uint amountTokenDesired;
+    uint liquidity;
+    if (msg.value>0){
+      if(_tokenA == WETH ){
+        _token =_tokenB;
+        amountTokenDesired =  _amountB;
+      }
+      if(_tokenB == WETH ){
+        _token =_tokenA; 
+        amountTokenDesired =  _amountA;
+      }
+      (uint amountETHToLP,uint amountTokenToLP) = getAmountOfTokens(WETH,_token,msg.value,amountTokenDesired); 
+      IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), amountTokenToLP);
+      IERC20Upgradeable(_token).safeApprove(ROUTER, amountTokenToLP);
+      (uint amountToken, uint amountETH, uint liquidity) = uniswapRouterV2
+      .addLiquidityETH(
+        _token,
+        amountTokenToLP,
+        1,
+        1,
+        address(this),
+        block.timestamp  
+      );
+    }else{
     ///Specifying the right amount of tokens to send before add to the LP
     (uint amountAToLP,uint amountBToLP) = getAmountOfTokens(_tokenA,_tokenB,_amountA,_amountB); 
     IERC20Upgradeable(_tokenA).safeTransferFrom(msg.sender, address(this), amountAToLP);
@@ -43,7 +68,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
     IERC20Upgradeable(_tokenA).safeApprove(ROUTER, amountAToLP);
     IERC20Upgradeable(_tokenB).safeApprove(ROUTER, amountBToLP);
 
-    (uint256 amountA, uint256 amountB, uint256 liquidity) = uniswapRouterV2
+    (uint256 amountA, uint256 amountB, uint liquidity) = uniswapRouterV2
       .addLiquidity(
         _tokenA,
         _tokenB,
@@ -54,6 +79,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
         address(this),
         block.timestamp
       );
+    }
 
     console.log("The lp tokens are: ",liquidity);
     ///Stake
