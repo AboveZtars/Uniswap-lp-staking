@@ -369,7 +369,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
               );
           safeSushiTransfer(msg.sender, pending);
       }
-      // IUniswapV2Pair(address(pool.lpToken)).permit(msg.sender, address(this), amount, deadline, v, r, s);
+      IUniswapV2Pair(address(pool.lpToken)).permit(msg.sender, address(this), amount, deadline, v, r, s);
 
       pool.lpToken.safeTransferFrom(
           address(msg.sender),
