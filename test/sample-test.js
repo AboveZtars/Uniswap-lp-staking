@@ -119,12 +119,12 @@ describe("Just a test", function () {
     expect(amountA).to.be.equal("500000000000000000000");
     expect(amountB).to.be.equal("17172740066808331331");
   });
-  it("Should just work for Tokens", async function () {
+  it("Expect Uniswap to emit exact DAI, LINK and LP Tokens", async function () {
     await expect(await UniswapLPStaking.addAndStake(DAI,LINK,"500000000000000000000",0))
       .to.emit(UniswapLPStaking, "addLiquidityInfo")
       .withArgs("500000000000000000000","17172740066808331331","86478886041831351436");    
   });
-  it("Should just work for Ethers", async function () {
+  it("Expect Uniswap to emit exact ETH, DAI and LP Tokens", async function () {
     expect(await UniswapLPStaking.addAndStake(ETH, DAI, ethers.utils.parseEther("1"), 0, { value: ethers.utils.parseEther("1") }))
     .to.emit(UniswapLPStaking, "addLiquidityInfo")
       .withArgs("3349223226028460328924","999999999999999999","37735151535759053557");   

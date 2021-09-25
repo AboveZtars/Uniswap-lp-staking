@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: Unlicense
 pragma solidity 0.8.7;
 
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
