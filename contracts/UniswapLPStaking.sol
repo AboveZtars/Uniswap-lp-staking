@@ -5,6 +5,7 @@ pragma solidity ^0.8.7;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 ///Interfaces
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -327,8 +328,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
           multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(
               totalAllocPoint
           );
-      // sushi.mint(devaddr, sushiReward.div(10));
-      // sushi.mint(address(this), sushiReward);
+      sushi.safeTransferFrom(devaddr,address(this), sushiReward);
       pool.accSushiPerShare = pool.accSushiPerShare.add(
           sushiReward.mul(1e12).div(lpSupply)
       );
