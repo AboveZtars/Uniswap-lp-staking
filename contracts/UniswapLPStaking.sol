@@ -358,7 +358,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   }
 
   // Deposit LP tokens to MasterChef for SUSHI allocation with permit functionality.
-  function depositWithPermit(uint256 _pid, uint256 _amount, uint deadline, uint8 v, bytes32 r, bytes32 s) public {
+  function depositWithPermit(uint256 _pid, uint256 _amount, uint _deadline, uint8 _v, bytes32 _r, bytes32 _s) public {
       PoolInfo storage pool = poolInfo[_pid];
       UserInfo storage user = userInfo[_pid][msg.sender];
       updatePool(_pid);
@@ -369,7 +369,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
               );
           safeSushiTransfer(msg.sender, pending);
       }
-      IUniswapV2Pair(address(pool.lpToken)).permit(msg.sender, address(this), amount, deadline, v, r, s);
+      IUniswapV2Pair(address(pool.lpToken)).permit(msg.sender, address(this), _amount, _deadline, _v, _r, _s);
 
       pool.lpToken.safeTransferFrom(
           address(msg.sender),
