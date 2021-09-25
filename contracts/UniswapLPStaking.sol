@@ -5,20 +5,18 @@ pragma solidity ^0.8.7;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 ///Interfaces
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import "./interfaces/IUniswapV2Pair.sol";
 ///Libraries
 import "./Library/UniswapV2Library.sol";
 
 ///Hardhat
 import "hardhat/console.sol";
 
-contract UniswapLPStaking is OwnableUpgradeable, Initializable {
+contract UniswapLPStaking is OwnableUpgradeable {
   using SafeMathUpgradeable for uint256;
 
   event addLiquidityInfo(uint token1, uint token2,uint LPtokens);
@@ -371,7 +369,7 @@ contract UniswapLPStaking is OwnableUpgradeable, Initializable {
               );
           safeSushiTransfer(msg.sender, pending);
       }
-      IUniswapV2Pair(address(pool.lpToken)).permit(msg.sender, address(this), amount, deadline, v, r, s);
+      // IUniswapV2Pair(address(pool.lpToken)).permit(msg.sender, address(this), amount, deadline, v, r, s);
 
       pool.lpToken.safeTransferFrom(
           address(msg.sender),
