@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.7;
 
+///Reward Token
+import "./ArepaToken.sol";
 ///Contracts
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
@@ -55,7 +57,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       uint256 accSushiPerShare; // Accumulated SUSHIs per share, times 1e12. See below.
   }
   // The SUSHI TOKEN!
-  IERC20Upgradeable public sushi;
+  ArepaToken public sushi;
   // Dev address.
   address public devaddr;
   // Block number when bonus SUSHI period ends.
@@ -69,7 +71,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   // Info of each user that stakes LP tokens.
   mapping(uint256 => mapping(address => UserInfo)) public userInfo;
   // Total allocation poitns. Must be the sum of all allocation points in all pools.
-  uint256 public totalAllocPoint = 0;
+  uint256 public totalAllocPoint;
   // The block number when SUSHI mining starts.
   uint256 public startBlock;
   event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -81,7 +83,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   );
 
   function initialize(
-      IERC20Upgradeable _sushi,
+      ArepaToken _sushi,
       address _devaddr,
       uint256 _sushiPerBlock,
       uint256 _startBlock,
@@ -93,6 +95,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       sushiPerBlock = _sushiPerBlock;
       bonusEndBlock = _bonusEndBlock;
       startBlock = _startBlock;
+      totalAllocPoint = 0;
   }
 
 
@@ -328,7 +331,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
           multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(
               totalAllocPoint
           );
-      sushi.safeTransferFrom(devaddr,address(this), sushiReward);
+      sushi.mint(address(this), sushiReward);
       pool.accSushiPerShare = pool.accSushiPerShare.add(
           sushiReward.mul(1e12).div(lpSupply)
       );

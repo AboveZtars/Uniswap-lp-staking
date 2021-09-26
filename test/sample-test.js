@@ -1,7 +1,9 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const { constants, BN } = require("@openzeppelin/test-helpers");
+const time = require("@openzeppelin/test-helpers/src/time");
 const genericErc20Abi = require("./ERC20/ERC20.json");
+const ether = require("@openzeppelin/test-helpers/src/ether");
 
 //For regular use
 const DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -11,51 +13,86 @@ const LINK = "0x514910771AF9Ca656af840dff83E8264EcF986CA";
 const ETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; //This is WETH
 const source1 = "Uniswap_V3";
 const source2 = "Uniswap_V3";
+const DAI_ETH_PAIR = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11"
+
+//provider
+const provider = ethers.provider;
 
 describe("Just a test", function () {
 
+  let ArepaToken;
   let UniswapLPStaking;
   let accounts;
+  let blockNumber;
 
   before("deploy UniswapLPStaking", async () => {
     accounts = await ethers.getSigners();
+    blockNumber =  await provider.getBlockNumber();
+
+    //deploying reward token
+    console.log("Deploying ArepaToken smart contract");
+    const ArepaTokenFactory = await ethers.getContractFactory(
+      "ArepaToken"
+    );
+    ArepaToken = await ArepaTokenFactory.deploy();
+    await ArepaToken.deployed();
+    
+    //deploying staking contract
     console.log("Deploying UniswapLPStaking smart contract");
     const UniswapLPStakingFactory = await ethers.getContractFactory(
       "UniswapLPStaking"
     );
-    UniswapLPStaking = await UniswapLPStakingFactory.deploy();
-    await UniswapLPStaking.deployed();
+    UniswapLPStaking = await upgrades.deployProxy(UniswapLPStakingFactory,
+      [ArepaToken.address, 
+      accounts[0].address, 
+      ethers.utils.parseUnits('1.0', 18), 
+      blockNumber, 
+      blockNumber + 100000]);
 
     //Swapper tool to get Tokens
     const ToolV2Factory = await ethers.getContractFactory("ToolV2");
     ToolV2 = await ToolV2Factory.deploy();
     await ToolV2.deployed();
 
+    //setting staking contract as owner of reward token for minting
+    await ArepaToken.transferOwnership(UniswapLPStaking.address);
+
+    //adding the DAI/ETH LP Token address to the list of accepted pools for staking
+    await UniswapLPStaking.add("1", DAI_ETH_PAIR, false);
+
+
 
     //accepted Contracts
     erc20ContractDAI = new ethers.Contract(
       DAI,
       genericErc20Abi,
-      await ethers.provider
+      provider
     );
 
     erc20ContractUSDC = new ethers.Contract(
       USDC,
       genericErc20Abi,
-      await ethers.provider
+      provider
     );
 
     erc20ContractUSDT = new ethers.Contract(
       USDT,
       genericErc20Abi,
-      await ethers.provider
+      provider
     );
 
     erc20ContractLINK = new ethers.Contract(
       LINK,
       genericErc20Abi,
-      await ethers.provider
+      provider
     );
+
+    daiEthPairContract = new ethers.Contract(
+      DAI_ETH_PAIR,
+      genericErc20Abi,
+      provider
+    );
+
 
     //Obtaining DAI, USDC, USDT and LINK tokens to test transfers an all accounts
     for (let i = 0; i < 10; i++) {
@@ -129,4 +166,39 @@ describe("Just a test", function () {
     .to.emit(UniswapLPStaking, "addLiquidityInfo")
       .withArgs("3349223226028460328924","999999999999999999","37735151535759053557");   
   });
+
+  describe("staking", function() {
+    it("Should stake with DAI/ETH UNI LP Token", async function() {
+
+      //impersonating a DAI/ETH UNI LP Token holder
+      await hre.network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: ["0x79317fC0fB17bC0CE213a2B50F343e4D4C277704"],
+      });
+      //setting his balance to 1000 ETH
+      await network.provider.send("hardhat_setBalance", [
+          "0x79317fC0fB17bC0CE213a2B50F343e4D4C277704",
+          "0x3635c9adc5dea00000",
+        ]);
+      staker = await ethers.getSigner("0x79317fC0fB17bC0CE213a2B50F343e4D4C277704");
+      
+      await daiEthPairContract.connect(staker).approve(UniswapLPStaking.address, ethers.utils.parseUnits('100.0', 18))
+      await UniswapLPStaking.connect(staker).deposit("0", ethers.utils.parseUnits('100.0', 18))
+
+      // let blockNum = await time.latestBlock();
+
+      // await time.advanceBlockTo(blockNum.addn(10));
+
+      await UniswapLPStaking.connect(staker).withdraw("0", ethers.utils.parseUnits('100.0', 18))
+
+      let finalBalance = await ArepaToken.balanceOf(staker.address)
+      console.log(`Staker successfully mint: ${finalBalance} AREPA`)
+      console.log("The first arepaTokens ever!!!")
+      
+      let lpTokenBalance = await daiEthPairContract.balanceOf(staker.address)
+      console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`)
+
+    })
+  })
+
 });
