@@ -18,14 +18,31 @@ const DAI_ETH_PAIR = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11"
 //provider
 const provider = ethers.provider;
 
+
+
 describe("Just a test", function () {
 
   let ArepaToken;
   let UniswapLPStaking;
   let accounts;
   let blockNumber;
+  let staker;
+
 
   before("deploy UniswapLPStaking", async () => {
+
+    //impersonating a DAI/ETH UNI LP Token holder
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: ["0x79317fC0fB17bC0CE213a2B50F343e4D4C277704"],
+    });
+    //setting his balance to 1000 ETH
+    await network.provider.send("hardhat_setBalance", [
+        "0x79317fC0fB17bC0CE213a2B50F343e4D4C277704",
+        "0x3635c9adc5dea00000",
+      ]);
+    staker = await ethers.getSigner("0x79317fC0fB17bC0CE213a2B50F343e4D4C277704");
+    
     accounts = await ethers.getSigners();
     blockNumber =  await provider.getBlockNumber();
 
@@ -167,38 +184,34 @@ describe("Just a test", function () {
       .withArgs("3349223226028460328924","999999999999999999","37735151535759053557");   
   });
 
-  describe("staking", function() {
-    it("Should stake with DAI/ETH UNI LP Token", async function() {
+  it("Checking deposit to contract staking", async function() {
+    
+    await daiEthPairContract.connect(staker).approve(UniswapLPStaking.address, ethers.utils.parseUnits('100.0', 18))
 
-      //impersonating a DAI/ETH UNI LP Token holder
-      await hre.network.provider.request({
-        method: "hardhat_impersonateAccount",
-        params: ["0x79317fC0fB17bC0CE213a2B50F343e4D4C277704"],
-      });
-      //setting his balance to 1000 ETH
-      await network.provider.send("hardhat_setBalance", [
-          "0x79317fC0fB17bC0CE213a2B50F343e4D4C277704",
-          "0x3635c9adc5dea00000",
-        ]);
-      staker = await ethers.getSigner("0x79317fC0fB17bC0CE213a2B50F343e4D4C277704");
-      
-      await daiEthPairContract.connect(staker).approve(UniswapLPStaking.address, ethers.utils.parseUnits('100.0', 18))
-      await UniswapLPStaking.connect(staker).deposit("0", ethers.utils.parseUnits('100.0', 18))
+    expect(await UniswapLPStaking.connect(staker).deposit("0", ethers.utils.parseUnits('100.0', 18)))
+    .to.emit(UniswapLPStaking, "Deposit")
+    .withArgs(staker.address, "0", ethers.utils.parseEther("100"));  
+    
+  })
 
-      // let blockNum = await time.latestBlock();
+  it("Checking withdraw rewards after a period of time", async function() {
 
-      // await time.advanceBlockTo(blockNum.addn(10));
+    await network.provider.send("evm_increaseTime", [1200]);
+    await network.provider.send("evm_mine");
 
-      await UniswapLPStaking.connect(staker).withdraw("0", ethers.utils.parseUnits('100.0', 18))
+    expect(await UniswapLPStaking.connect(staker).withdraw("0", ethers.utils.parseUnits('100.0', 18)))
+      .to.emit(UniswapLPStaking, "Withdraw")
+      .withArgs(staker.address,0,ethers.utils.parseEther("100"),"14520621480400000000");  
 
-      let finalBalance = await ArepaToken.balanceOf(staker.address)
-      console.log(`Staker successfully mint: ${finalBalance} AREPA`)
-      console.log("The first arepaTokens ever!!!")
-      
-      let lpTokenBalance = await daiEthPairContract.balanceOf(staker.address)
-      console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`)
+    
 
-    })
+    /* let finalBalance = await ArepaToken.balanceOf(staker.address)
+    console.log(`Staker successfully mint: ${finalBalance} AREPA`)
+    console.log("The first arepaTokens ever!!!")
+    
+    let lpTokenBalance = await daiEthPairContract.balanceOf(staker.address)
+    console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`) */
+
   })
 
 });

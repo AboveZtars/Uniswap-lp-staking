@@ -75,7 +75,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   // The block number when SUSHI mining starts.
   uint256 public startBlock;
   event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-  event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
+  event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 pending);
   event EmergencyWithdraw(
       address indexed user,
       uint256 indexed pid,
@@ -221,7 +221,9 @@ contract UniswapLPStaking is OwnableUpgradeable {
     }
   }
 
-   //STAKING PART / sushiswap masterchef fork
+
+
+   ////STAKING PART / sushiswap masterchef fork
   function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
@@ -398,7 +400,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       user.amount = user.amount.sub(_amount);
       user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
       pool.lpToken.safeTransfer(address(msg.sender), _amount);
-      emit Withdraw(msg.sender, _pid, _amount);
+      emit Withdraw(msg.sender, _pid, _amount, pending);
   }
 
   // Withdraw without caring about rewards. EMERGENCY ONLY.
