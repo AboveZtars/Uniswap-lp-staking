@@ -214,5 +214,36 @@ describe("Just a test", function () {
     console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`) */
 
   })
+  it("Should stake with DAI/ETH UNI LP Token con permit", async function() {
+
+    //impersonating a DAI/ETH UNI LP Token holder
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: ["0x79317fC0fB17bC0CE213a2B50F343e4D4C277704"],
+    });
+    //setting his balance to 1000 ETH
+    await network.provider.send("hardhat_setBalance", [
+        "0x79317fC0fB17bC0CE213a2B50F343e4D4C277704",
+        "0x3635c9adc5dea00000",
+      ]);
+    staker = await ethers.getSigner("0x79317fC0fB17bC0CE213a2B50F343e4D4C277704");
+
+    await daiEthPairContract.connect(staker).transfer(accounts[0].address, ethers.utils.parseUnits('100.0', 18))
+
+    let value = "100000000000000000000";
+    const result = await signERC2612Permit(provider, daiEthPairContract.address, accounts[0].address, UniswapLPStaking.address, value);
+
+    await UniswapLPStaking.depositWithPermit("0", value, result.deadline, result.v, result.r, result.s)
+
+    await UniswapLPStaking.withdraw("0", ethers.utils.parseUnits('100.0', 18))
+
+    let finalBalance = await ArepaToken.balanceOf(accounts[0].address)
+    console.log(`Staker successfully mint: ${finalBalance} AREPA`)
+    console.log("The first arepaTokens ever!!!")
+    
+    let lpTokenBalance = await daiEthPairContract.balanceOf(accounts[0].address)
+    console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`)
+
+  })
 
 });
