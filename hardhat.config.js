@@ -44,7 +44,7 @@ module.exports = {
         url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
         blockNumber: 13224139,
       },
-      chainId: 1337
+      chainId: 1
     }
   },
   mocha: {

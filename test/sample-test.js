@@ -4,6 +4,7 @@ const { constants, BN } = require("@openzeppelin/test-helpers");
 const time = require("@openzeppelin/test-helpers/src/time");
 const genericErc20Abi = require("./ERC20/ERC20.json");
 const ether = require("@openzeppelin/test-helpers/src/ether");
+const { signDaiPermit, signERC2612Permit } = require("eth-permit")
 
 //For regular use
 const DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -196,6 +197,41 @@ describe("Just a test", function () {
       console.log("The first arepaTokens ever!!!")
       
       let lpTokenBalance = await daiEthPairContract.balanceOf(staker.address)
+      console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`)
+
+    })
+    it("Should stake with DAI/ETH UNI LP Token con permit", async function() {
+
+      //impersonating a DAI/ETH UNI LP Token holder
+      await hre.network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: ["0x79317fC0fB17bC0CE213a2B50F343e4D4C277704"],
+      });
+      //setting his balance to 1000 ETH
+      await network.provider.send("hardhat_setBalance", [
+          "0x79317fC0fB17bC0CE213a2B50F343e4D4C277704",
+          "0x3635c9adc5dea00000",
+        ]);
+      staker = await ethers.getSigner("0x79317fC0fB17bC0CE213a2B50F343e4D4C277704");
+
+      await daiEthPairContract.connect(staker).transfer(accounts[0].address, ethers.utils.parseUnits('100.0', 18))
+
+      let value = "100000000000000000000";
+      const result = await signERC2612Permit(provider, daiEthPairContract.address, accounts[0].address, UniswapLPStaking.address, value);
+
+      await UniswapLPStaking.depositWithPermit("0", value, result.deadline, result.v, result.r, result.s)
+
+      // let blockNum = await time.latestBlock();
+
+      // await time.advanceBlockTo(blockNum.addn(10));
+
+      await UniswapLPStaking.withdraw("0", ethers.utils.parseUnits('100.0', 18))
+
+      let finalBalance = await ArepaToken.balanceOf(accounts[0].address)
+      console.log(`Staker successfully mint: ${finalBalance} AREPA`)
+      console.log("The first arepaTokens ever!!!")
+      
+      let lpTokenBalance = await daiEthPairContract.balanceOf(accounts[0].address)
       console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`)
 
     })
