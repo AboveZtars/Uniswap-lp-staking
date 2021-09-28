@@ -200,11 +200,6 @@ contract UniswapLPStaking is OwnableUpgradeable {
     deposit(pairPid[pair], liquidityScope, false);
   }
 
-  function withdrawReward() public {}
-
-  ///Functions
-  function swap() public {}
-
   function getAmountOfTokens(
     address _tokenA,
     address _tokenB,
