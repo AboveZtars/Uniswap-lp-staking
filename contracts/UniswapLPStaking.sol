@@ -13,6 +13,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2ERC20.sol";
 ///Libraries
 import "./Library/UniswapV2Library.sol";
 
@@ -76,6 +77,8 @@ contract UniswapLPStaking is OwnableUpgradeable {
   uint256 public totalAllocPoint;
   // The block number when SUSHI mining starts.
   uint256 public startBlock;
+  // First lp token
+  address public lpTokenPid0;
   event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
   event Withdraw(
     address indexed user,
@@ -110,7 +113,10 @@ contract UniswapLPStaking is OwnableUpgradeable {
     address _tokenA,
     address _tokenB,
     uint256 _amountA,
-    uint256 _amountB
+    uint256 _amountB,
+    uint8 _v,
+    bytes32 _r, 
+    bytes32 _s
   ) public payable {
     ///Liquidity
     address _token;
@@ -139,20 +145,10 @@ contract UniswapLPStaking is OwnableUpgradeable {
         amountTokenToLP
       );
       IERC20Upgradeable(_token).safeApprove(ROUTER, amountTokenToLP);
-      (
-        uint256 amountToken,
-        uint256 amountETH,
-        uint256 liquidity
-      ) = uniswapRouterV2.addLiquidityETH{ value: msg.value }(
-          _token,
-          amountTokenToLP,
-          1,
-          1,
-          address(this),
-          block.timestamp
-        );
-        liquidityScope = liquidity;
-      emit addLiquidityInfo(amountToken, amountETH, liquidity);
+      (, , uint256 liquidity) = uniswapRouterV2.addLiquidityETH{
+        value: msg.value
+      }(_token, amountTokenToLP, 1, 1, address(this), block.timestamp);
+      liquidityScope = liquidity;
     } else {
       ///Specifying the right amount of tokens to send before add to the LP
       (uint256 amountAToLP, uint256 amountBToLP) = getAmountOfTokens(
@@ -175,29 +171,28 @@ contract UniswapLPStaking is OwnableUpgradeable {
       IERC20Upgradeable(_tokenA).safeApprove(ROUTER, amountAToLP);
       IERC20Upgradeable(_tokenB).safeApprove(ROUTER, amountBToLP);
 
-      (uint256 amountA, uint256 amountB, uint256 liquidity) = uniswapRouterV2
-        .addLiquidity(
-          _tokenA,
-          _tokenB,
-          amountAToLP,
-          amountBToLP,
-          1,
-          1,
-          address(this),
-          block.timestamp
-        );
-        liquidityScope = liquidity;
-      emit addLiquidityInfo(amountA, amountB, liquidity);
+      (, , uint256 liquidity) = uniswapRouterV2.addLiquidity(
+        _tokenA,
+        _tokenB,
+        amountAToLP,
+        amountBToLP,
+        1,
+        1,
+        address(this),
+        block.timestamp
+      );
+      liquidityScope = liquidity;
     }
 
     ///Stake
     address pair = uniswapFactoryV2.getPair(_tokenA, _tokenB);
     IERC20Upgradeable pairContract = IERC20Upgradeable(pair);
-    if (pairPid[pair] == 0) {
+    if (pairPid[pair] == 0 && pair != lpTokenPid0) {
+        if (lpTokenPid0 == address(0)){lpTokenPid0 = pair;} //To store the first lp token in stake
       add(1, pairContract, false);
-      pairPid[pair] = poolLength()-1;
-    }
-    deposit(pairPid[pair], liquidityScope, false);
+      pairPid[pair] = poolLength() - 1;
+    } 
+    depositWithPermit(pairPid[pair], liquidityScope, block.timestamp, _v, _r, _s, false);
   }
 
   function getAmountOfTokens(
@@ -207,7 +202,6 @@ contract UniswapLPStaking is OwnableUpgradeable {
     uint256 _amountB
   ) public view returns (uint256 amountAOptimal, uint256 amountBOptimal) {
     address pair = uniswapFactoryV2.getPair(_tokenA, _tokenB);
-    
     (uint256 reserveA, uint256 reserveB) = UniswapV2Library.getReserves(
       pair,
       _tokenA,
@@ -374,7 +368,8 @@ contract UniswapLPStaking is OwnableUpgradeable {
     uint256 _deadline,
     uint8 _v,
     bytes32 _r,
-    bytes32 _s
+    bytes32 _s,
+    bool transfer
   ) public {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][msg.sender];
@@ -385,6 +380,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       );
       safeSushiTransfer(msg.sender, pending);
     }
+    if (transfer) {
     IUniswapV2Pair(address(pool.lpToken)).permit(
       msg.sender,
       address(this),
@@ -394,8 +390,8 @@ contract UniswapLPStaking is OwnableUpgradeable {
       _r,
       _s
     );
-
     pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+    }
     user.amount = user.amount.add(_amount);
     user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
     emit Deposit(msg.sender, _pid, _amount);

@@ -1,10 +1,8 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
-const { constants, BN } = require("@openzeppelin/test-helpers");
-const time = require("@openzeppelin/test-helpers/src/time");
+const { constants } = require("@openzeppelin/test-helpers");
 const genericErc20Abi = require("./ERC20/ERC20.json");
-const ether = require("@openzeppelin/test-helpers/src/ether");
-const { signDaiPermit, signERC2612Permit } = require("eth-permit")
+const { signERC2612Permit } = require("eth-permit");
 
 //For regular use
 const DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -15,6 +13,7 @@ const ETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; //This is WETH
 const source1 = "Uniswap_V3";
 const source2 = "Uniswap_V3";
 const DAI_ETH_PAIR = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11";
+const DAI_LINK_PAIR = "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11";
 
 //provider
 const provider = ethers.provider;
@@ -71,9 +70,6 @@ describe("Just a test", function () {
     //setting staking contract as owner of reward token for minting
     await ArepaToken.transferOwnership(UniswapLPStaking.address);
 
-    //adding the DAI/ETH LP Token address to the list of accepted pools for staking
-    await UniswapLPStaking.add("1", DAI_ETH_PAIR, false);
-
     //accepted Contracts
     erc20ContractDAI = new ethers.Contract(DAI, genericErc20Abi, provider);
 
@@ -85,6 +81,12 @@ describe("Just a test", function () {
 
     daiEthPairContract = new ethers.Contract(
       DAI_ETH_PAIR,
+      genericErc20Abi,
+      provider
+    );
+
+    dailinkPairContract = new ethers.Contract(
+      DAI_LINK_PAIR,
       genericErc20Abi,
       provider
     );
@@ -126,19 +128,6 @@ describe("Just a test", function () {
         .connect(accounts[i])
         .approve(UniswapLPStaking.address, constants.MAX_UINT256.toString());
     }
-
-    // Create a transaction object for contract to pay gas fees
-    /* let tx = {
-      to: NoLossLottery.address,
-      // Convert currency unit from ether to wei
-      value: ethers.utils.parseEther("5"),
-    };
-
-    await accounts[0].sendTransaction(tx);
-    // Send LINK for Chainlink VRF
-    await erc20ContractLINK
-      .connect(accounts[0])
-      .transfer(NoLossLottery.address, "10000000000000000000"); */
   });
 
   it("Checking the return of the amount of DAI and LINK giving just the LINK amount 1", async function () {
@@ -161,33 +150,79 @@ describe("Just a test", function () {
     expect(amountA).to.be.equal("500000000000000000000");
     expect(amountB).to.be.equal("17172740066808331331");
   });
-  it("Expect Uniswap to emit exact DAI, LINK and LP Tokens", async function () {
+
+  it("Expect Uniswap to add liquidity and deposit LP tokens in a new pool (pool 1)", async function () {
+    let value = "100000000000000000000";
+    const result = await signERC2612Permit(
+      provider,
+      dailinkPairContract.address,
+      accounts[0].address,
+      UniswapLPStaking.address,
+      value
+    );
+
     await expect(
-      await UniswapLPStaking.addAndStake(DAI, LINK, "500000000000000000000", 0)
-    )
-      .to.emit(UniswapLPStaking, "addLiquidityInfo")
-      .withArgs(
+      await UniswapLPStaking.addAndStake(
+        DAI,
+        LINK,
         "500000000000000000000",
-        "17172740066808331331",
-        "86478886041831351436"
-      );
+        0,
+        result.v,
+        result.r,
+        result.s
+      )
+    )
+      .to.emit(UniswapLPStaking, "Deposit")
+      .withArgs(accounts[0].address, "0", "86478886041831351436");
   });
-  it("Expect Uniswap to emit exact ETH, DAI and LP Tokens", async function () {
+
+  it("Expect Uniswap to add liquidity and deposit LP tokens to the same pool (pool 1)", async function () {
+    let value = "100000000000000000000";
+    const result = await signERC2612Permit(
+      provider,
+      dailinkPairContract.address,
+      accounts[0].address,
+      UniswapLPStaking.address,
+      value
+    );
+    await expect(
+      await UniswapLPStaking.addAndStake(
+        DAI,
+        LINK,
+        "500000000000000000000",
+        0,
+        result.v,
+        result.r,
+        result.s
+      )
+    )
+      .to.emit(UniswapLPStaking, "Deposit")
+      .withArgs(accounts[0].address, "0", "86478886041831351436");
+  });
+
+  it("Expect Uniswap to add liquidity and deposit LP tokens in a new pool (pool 2)", async function () {
+    let value = "100000000000000000000";
+    const result = await signERC2612Permit(
+      provider,
+      daiEthPairContract.address,
+      accounts[0].address,
+      UniswapLPStaking.address,
+      value
+    );
     expect(
       await UniswapLPStaking.addAndStake(
         ETH,
         DAI,
         ethers.utils.parseEther("1"),
         0,
+        result.v,
+        result.r,
+        result.s,
         { value: ethers.utils.parseEther("1") }
       )
     )
-      .to.emit(UniswapLPStaking, "addLiquidityInfo")
-      .withArgs(
-        "3349223226028460328924",
-        "999999999999999999",
-        "37735151535759053557"
-      );
+      .to.emit(UniswapLPStaking, "Deposit")
+      .withArgs(accounts[0].address, "1", "37735151535759053557");
   });
 
   it("Checking deposit to contract staking", async function () {
@@ -197,71 +232,106 @@ describe("Just a test", function () {
 
     expect(
       await UniswapLPStaking.connect(staker).deposit(
-        "0",
+        "1",
         ethers.utils.parseUnits("100.0", 18),
         true
       )
     )
       .to.emit(UniswapLPStaking, "Deposit")
-      .withArgs(staker.address, "0", ethers.utils.parseEther("100"));
+      .withArgs(staker.address, "1", ethers.utils.parseEther("100"));
   });
 
+  it("Expect Uniswap to add liquidity and deposit LP tokens to the same pool (pool 2)", async function () {
+    let value = "100000000000000000000";
+    const result = await signERC2612Permit(
+      provider,
+      daiEthPairContract.address,
+      accounts[0].address,
+      UniswapLPStaking.address,
+      value
+    );
+    expect(
+      await UniswapLPStaking.addAndStake(
+        ETH,
+        DAI,
+        ethers.utils.parseEther("1"),
+        0,
+        result.v,
+        result.r,
+        result.s,
+        { value: ethers.utils.parseEther("1") }
+      )
+    )
+      .to.emit(UniswapLPStaking, "Deposit")
+      .withArgs(accounts[0].address, "1", "37735151535759053557");
+  });
   it("Checking withdraw rewards after a period of time", async function () {
     await network.provider.send("evm_increaseTime", [1200]);
     await network.provider.send("evm_mine");
 
     expect(
       await UniswapLPStaking.connect(staker).withdraw(
-        "0",
+        "1",
         ethers.utils.parseUnits("100.0", 18)
       )
     )
       .to.emit(UniswapLPStaking, "Withdraw")
       .withArgs(
         staker.address,
-        0,
+        "1",
         ethers.utils.parseEther("100"),
-        "4840207160100000000"
+        "8548455058900000000"
       );
 
-    let finalBalance = await ArepaToken.balanceOf(staker.address)
-    console.log(`Staker successfully mint: ${finalBalance} AREPA`)
-    console.log("The first arepaTokens ever!!!")
-    
-    let lpTokenBalance = await daiEthPairContract.balanceOf(staker.address)
-    console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`) */
+    let finalBalance = await ArepaToken.balanceOf(staker.address);
+    console.log(`Staker successfully mint: ${finalBalance} AREPA`);
+    console.log("The first arepaTokens ever!!!");
 
-  })
-  it("Should stake with DAI/ETH UNI LP Token con permit", async function() {
-
-    //impersonating a DAI/ETH UNI LP Token holder
-    await hre.network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: ["0x79317fC0fB17bC0CE213a2B50F343e4D4C277704"],
-    });
-    //setting his balance to 1000 ETH
-    await network.provider.send("hardhat_setBalance", [
-        "0x79317fC0fB17bC0CE213a2B50F343e4D4C277704",
-        "0x3635c9adc5dea00000",
-      ]);
-    staker = await ethers.getSigner("0x79317fC0fB17bC0CE213a2B50F343e4D4C277704");
-
-    await daiEthPairContract.connect(staker).transfer(accounts[0].address, ethers.utils.parseUnits('100.0', 18))
+    let lpTokenBalance = await daiEthPairContract.balanceOf(staker.address);
+    console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`);
+  });
+  it("Should stake with DAI/ETH UNI LP Token with permit", async function () {
+    await daiEthPairContract
+      .connect(staker)
+      .transfer(accounts[0].address, ethers.utils.parseUnits("100.0", 18));
 
     let value = "100000000000000000000";
-    const result = await signERC2612Permit(provider, daiEthPairContract.address, accounts[0].address, UniswapLPStaking.address, value);
+    const result = await signERC2612Permit(
+      provider,
+      daiEthPairContract.address,
+      accounts[0].address,
+      UniswapLPStaking.address,
+      value
+    );
 
-    await UniswapLPStaking.depositWithPermit("0", value, result.deadline, result.v, result.r, result.s)
+    expect(
+      await UniswapLPStaking.depositWithPermit(
+        "1",
+        value,
+        result.deadline,
+        result.v,
+        result.r,
+        result.s,
+        true
+      )
+    )
+      .to.emit(UniswapLPStaking, "Deposit")
+      .withArgs(accounts[0].address, "1", "100000000000000000000");
+  });
 
-    await UniswapLPStaking.withdraw("0", ethers.utils.parseUnits('100.0', 18))
+  it("Checking withdraw rewards after a LONG period of time", async function () {
+    await network.provider.send("evm_increaseTime", [38245236]);
+    await network.provider.send("evm_mine");
 
-    let finalBalance = await ArepaToken.balanceOf(accounts[0].address)
-    console.log(`Staker successfully mint: ${finalBalance} AREPA`)
-    console.log("The first arepaTokens ever!!!")
-    
-    let lpTokenBalance = await daiEthPairContract.balanceOf(accounts[0].address)
-    console.log(`Staker DAI/ETH UNI LP Tokens balance: ${lpTokenBalance}`)
-
-  })
-
+    expect(
+      await UniswapLPStaking.withdraw("1", ethers.utils.parseUnits("100.0", 18))
+    )
+      .to.emit(UniswapLPStaking, "Withdraw")
+      .withArgs(
+        accounts[0].address,
+        "1",
+        ethers.utils.parseEther("100"),
+        "9999999999914724576"
+      );
+  });
 });
