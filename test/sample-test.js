@@ -13,7 +13,7 @@ const ETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; //This is WETH
 const source1 = "Uniswap_V3";
 const source2 = "Uniswap_V3";
 const DAI_ETH_PAIR = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11";
-const DAI_LINK_PAIR = "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11";
+const DAI_LINK_PAIR = "0x6D4fd456eDecA58Cf53A8b586cd50754547DBDB2";
 
 //provider
 const provider = ethers.provider;
@@ -185,6 +185,9 @@ describe("Just a test", function () {
       UniswapLPStaking.address,
       value
     );
+    console.log(result.v);
+    console.log(result.r);
+    console.log(result.s);
     await expect(
       await UniswapLPStaking.addAndStake(
         DAI,
@@ -209,6 +212,9 @@ describe("Just a test", function () {
       UniswapLPStaking.address,
       value
     );
+    console.log(result.v);
+    console.log(result.r);
+    console.log(result.s);
     expect(
       await UniswapLPStaking.addAndStake(
         ETH,
