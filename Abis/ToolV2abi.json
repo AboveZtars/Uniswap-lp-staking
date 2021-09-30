@@ -1,0 +1,38 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "percentage",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "tokenAddress",
+        "type": "address[]"
+      },
+      {
+        "internalType": "string[]",
+        "name": "protocol",
+        "type": "string[]"
+      }
+    ],
+    "name": "swapForPercentageV2",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "uniswapRouterV3",
+    "outputs": [
+      {
+        "internalType": "contract ISwapRouter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
