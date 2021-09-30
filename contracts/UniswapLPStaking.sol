@@ -23,7 +23,7 @@ import "hardhat/console.sol";
 contract UniswapLPStaking is OwnableUpgradeable {
   using SafeMathUpgradeable for uint256;
 
-  event addLiquidityInfo(uint256 token1, uint256 token2, uint256 LPtokens);
+  event addLiquidityInfo(uint256 LPtokens);
 
   using SafeERC20Upgradeable for IERC20Upgradeable;
   address private constant FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
@@ -185,11 +185,82 @@ contract UniswapLPStaking is OwnableUpgradeable {
     address pair = uniswapFactoryV2.getPair(_tokenA, _tokenB);
     IERC20Upgradeable pairContract = IERC20Upgradeable(pair);
     if (pairPid[pair] == 0 && pair != lpTokenPid0) {
-        if (lpTokenPid0 == address(0)){lpTokenPid0 = pair;} //To store the first lp token in stake
+      if (lpTokenPid0 == address(0)) {
+        lpTokenPid0 = pair;
+      } //To store the first lp token in stake
       add(1, pairContract, false);
       pairPid[pair] = poolLength() - 1;
-    } 
+    }
     deposit(pairPid[pair], liquidityScope, false);
+  }
+
+  function justAddLiquidity(
+    address _tokenA,
+    address _tokenB,
+    uint256 _amountA,
+    uint256 _amountB
+  ) public payable {
+    address _token;
+    uint256 amountTokenDesired;
+    if (msg.value > 0) {
+      if (_tokenA == WETH) {
+        _token = _tokenB;
+        amountTokenDesired = _amountB;
+      }
+      if (_tokenB == WETH) {
+        _token = _tokenA;
+        amountTokenDesired = _amountA;
+      }
+
+      (, uint256 amountTokenToLP) = getAmountOfTokens(
+        WETH,
+        _token,
+        msg.value,
+        amountTokenDesired
+      );
+      IERC20Upgradeable(_token).safeTransferFrom(
+        msg.sender,
+        address(this),
+        amountTokenToLP
+      );
+      IERC20Upgradeable(_token).safeApprove(ROUTER, amountTokenToLP);
+      (, , uint256 liquidity) = uniswapRouterV2.addLiquidityETH{value: msg.value}(_token, amountTokenToLP, 1, 1, msg.sender, block.timestamp);
+      console.log("token just add liquidity: ",liquidity);
+      emit addLiquidityInfo(liquidity);
+    } else {
+      ///Specifying the right amount of tokens to send before add to the LP
+      (uint256 amountAToLP, uint256 amountBToLP) = getAmountOfTokens(
+        _tokenA,
+        _tokenB,
+        _amountA,
+        _amountB
+      );
+      IERC20Upgradeable(_tokenA).safeTransferFrom(
+        msg.sender,
+        address(this),
+        amountAToLP
+      );
+      IERC20Upgradeable(_tokenB).safeTransferFrom(
+        msg.sender,
+        address(this),
+        amountBToLP
+      );
+
+      IERC20Upgradeable(_tokenA).safeApprove(ROUTER, amountAToLP);
+      IERC20Upgradeable(_tokenB).safeApprove(ROUTER, amountBToLP);
+
+      (, , uint256 liquidity) = uniswapRouterV2.addLiquidity(
+        _tokenA,
+        _tokenB,
+        amountAToLP,
+        amountBToLP,
+        1,
+        1,
+        msg.sender,
+        block.timestamp
+      );
+      emit addLiquidityInfo(liquidity);
+    }
   }
 
   function getAmountOfTokens(
@@ -378,16 +449,20 @@ contract UniswapLPStaking is OwnableUpgradeable {
       safeSushiTransfer(msg.sender, pending);
     }
     if (transfer) {
-    IUniswapV2Pair(address(pool.lpToken)).permit(
-      msg.sender,
-      address(this),
-      _amount,
-      _deadline,
-      _v,
-      _r,
-      _s
-    );
-    pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+      IUniswapV2Pair(address(pool.lpToken)).permit(
+        msg.sender,
+        address(this),
+        _amount,
+        _deadline,
+        _v,
+        _r,
+        _s
+      );
+      pool.lpToken.safeTransferFrom(
+        address(msg.sender),
+        address(this),
+        _amount
+      );
     }
     user.amount = user.amount.add(_amount);
     user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);

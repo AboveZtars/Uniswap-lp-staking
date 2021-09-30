@@ -291,4 +291,17 @@ describe("Just a test", function () {
         "9999999999914724576"
       );
   });
+
+  it("Checking just Add Liquidity ", async function () {
+    expect(
+      await UniswapLPStaking.connect(accounts[4]).justAddLiquidity(DAI,LINK, "500000000000000000000", 0)
+    )
+      .to.emit(UniswapLPStaking, "addLiquidityInfo")
+      .withArgs(
+        "86478886041831351436"
+      );
+    
+    let balance = await dailinkPairContract.balanceOf(accounts[4].address);
+    expect(balance).to.be.equal("86478886041831351436");
+  });
 });
