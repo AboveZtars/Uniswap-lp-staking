@@ -113,10 +113,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
     address _tokenA,
     address _tokenB,
     uint256 _amountA,
-    uint256 _amountB,
-    uint8 _v,
-    bytes32 _r, 
-    bytes32 _s
+    uint256 _amountB
   ) public payable {
     ///Liquidity
     address _token;
@@ -192,7 +189,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       add(1, pairContract, false);
       pairPid[pair] = poolLength() - 1;
     } 
-    depositWithPermit(pairPid[pair], liquidityScope, block.timestamp, _v, _r, _s, false);
+    deposit(pairPid[pair], liquidityScope, false);
   }
 
   function getAmountOfTokens(

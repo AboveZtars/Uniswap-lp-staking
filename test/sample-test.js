@@ -152,24 +152,12 @@ describe("Just a test", function () {
   });
 
   it("Expect Uniswap to add liquidity and deposit LP tokens in a new pool (pool 1)", async function () {
-    let value = "100000000000000000000";
-    const result = await signERC2612Permit(
-      provider,
-      dailinkPairContract.address,
-      accounts[0].address,
-      UniswapLPStaking.address,
-      value
-    );
-
     await expect(
       await UniswapLPStaking.addAndStake(
         DAI,
         LINK,
         "500000000000000000000",
-        0,
-        result.v,
-        result.r,
-        result.s
+        0
       )
     )
       .to.emit(UniswapLPStaking, "Deposit")
@@ -177,26 +165,12 @@ describe("Just a test", function () {
   });
 
   it("Expect Uniswap to add liquidity and deposit LP tokens to the same pool (pool 1)", async function () {
-    let value = "100000000000000000000";
-    const result = await signERC2612Permit(
-      provider,
-      dailinkPairContract.address,
-      accounts[0].address,
-      UniswapLPStaking.address,
-      value
-    );
-    console.log(result.v);
-    console.log(result.r);
-    console.log(result.s);
     await expect(
       await UniswapLPStaking.addAndStake(
         DAI,
         LINK,
         "500000000000000000000",
         0,
-        result.v,
-        result.r,
-        result.s
       )
     )
       .to.emit(UniswapLPStaking, "Deposit")
@@ -204,26 +178,13 @@ describe("Just a test", function () {
   });
 
   it("Expect Uniswap to add liquidity and deposit LP tokens in a new pool (pool 2)", async function () {
-    let value = "100000000000000000000";
-    const result = await signERC2612Permit(
-      provider,
-      daiEthPairContract.address,
-      accounts[0].address,
-      UniswapLPStaking.address,
-      value
-    );
-    console.log(result.v);
-    console.log(result.r);
-    console.log(result.s);
+
     expect(
       await UniswapLPStaking.addAndStake(
         ETH,
         DAI,
         ethers.utils.parseEther("1"),
         0,
-        result.v,
-        result.r,
-        result.s,
         { value: ethers.utils.parseEther("1") }
       )
     )
@@ -248,23 +209,13 @@ describe("Just a test", function () {
   });
 
   it("Expect Uniswap to add liquidity and deposit LP tokens to the same pool (pool 2)", async function () {
-    let value = "100000000000000000000";
-    const result = await signERC2612Permit(
-      provider,
-      daiEthPairContract.address,
-      accounts[0].address,
-      UniswapLPStaking.address,
-      value
-    );
+
     expect(
       await UniswapLPStaking.addAndStake(
         ETH,
         DAI,
         ethers.utils.parseEther("1"),
         0,
-        result.v,
-        result.r,
-        result.s,
         { value: ethers.utils.parseEther("1") }
       )
     )
