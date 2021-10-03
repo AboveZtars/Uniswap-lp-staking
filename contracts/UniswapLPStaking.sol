@@ -93,14 +93,6 @@ contract UniswapLPStaking is OwnableUpgradeable {
     uint256 amount,
     uint256 pending
   );
-  ///@param user the person that makes the deposit
-  ///@param pid the pool id
-  ///@param amount the amount of LP tokens deposited
-  event EmergencyWithdraw(
-    address indexed user,
-    uint256 indexed pid,
-    uint256 amount
-  );
 
   ///Libraries
   using SafeMathUpgradeable for uint256;
