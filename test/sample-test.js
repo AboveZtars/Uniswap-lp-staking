@@ -61,8 +61,6 @@ describe("Staking contract", function () {
     await ArepaToken.transferOwnership(UniswapLPStaking.address);
 
     await UniswapLPStaking.add("1", DAI_LINK_PAIR, false)
-    let pool = await UniswapLPStaking.poolInfo(0)
-    console.log(`arepappershare: ${pool.accArepaPerShare}`)
 
     //accepted Contracts
     erc20ContractDAI = new ethers.Contract(DAI, genericErc20Abi, provider);
@@ -232,8 +230,8 @@ describe("Staking contract", function () {
       )
       .to.emit(UniswapLPStaking, "Deposit")
       .withArgs(accounts[0].address, "1", "37735151535759053557");
-      
-      
+      let user = await UniswapLPStaking.userInfo("1", accounts[0].address)
+      expect(user.amount).to.equal("37735151535759053557")
     });
 
     it("Expect Uniswap to add liquidity in dai/eth and deposit LP tokens to the same pool", async function () {
@@ -247,9 +245,26 @@ describe("Staking contract", function () {
           { value: ethers.utils.parseEther("1") }
         )
       )
-        .to.emit(UniswapLPStaking, "Deposit")
-        .withArgs(accounts[0].address, "1", "37735151535759053557");
+      .to.emit(UniswapLPStaking, "Deposit")
+      .withArgs(accounts[0].address, "1", "37735151535759053557");
+      let user = await UniswapLPStaking.userInfo("1", accounts[0].address)
+      expect(user.amount).to.be.above("37735151535759053557")
     });
+  })
+
+  describe("Adding liquidity only", function() {
+    it("Should give LPTokens to user", async function() {
+        await UniswapLPStaking.connect(accounts[1]).addLiquidityOnly(
+          ETH,
+          DAI,
+          ethers.utils.parseEther("1"),
+          0,
+          { value: ethers.utils.parseEther("1") }
+        )
+        let lpTokenBalance = await daiEthPairContract.balanceOf(accounts[1].address)
+        console.log(`Balance user 1: ${lpTokenBalance}`)
+        expect(lpTokenBalance).to.equal("37735151535759053557")
+    })
   })
   
   describe("Staking LPToken only", function(){
@@ -273,6 +288,7 @@ describe("Staking contract", function () {
     it("Checking withdraw rewards after a period of time", async function () {
       await network.provider.send("evm_increaseTime", [1200]);
       await network.provider.send("evm_mine");
+      
   
       expect(
         await UniswapLPStaking.connect(staker).withdraw(
@@ -284,12 +300,12 @@ describe("Staking contract", function () {
         .withArgs(
           staker.address,
           "1",
-          ethers.utils.parseEther("100"),
+          ethers.utils.parseUnits("100"),
           "569897003934800000000"
         );
   
       let finalBalance = await ArepaToken.balanceOf(staker.address);
-      expect(finalBalance).to.be.above(0)
+      expect(finalBalance).to.equal("569897003934800000000")
     });
   })
   
@@ -330,13 +346,19 @@ describe("Staking contract", function () {
       expect(
         await UniswapLPStaking.withdraw("1", ethers.utils.parseUnits("100.0", 18))
       )
-        .to.emit(UniswapLPStaking, "Withdraw")
-        .withArgs(
-          accounts[0].address,
-          "1",
-          ethers.utils.parseEther("100"),
-          "999999999999895032158"
-        );
+      .to.emit(UniswapLPStaking, "Withdraw")
+      .withArgs(
+        accounts[0].address,
+        "1",
+        ethers.utils.parseUnits("100"),
+        "999999999999895032157"
+      );
+      let lpTokenbalance = await daiEthPairContract.balanceOf(accounts[0].address)
+      expect(lpTokenbalance).to.equal(ethers.utils.parseUnits("100"))
+      let finalBalanceOwner = await ArepaToken.balanceOf(accounts[0].address)
+      //the balance of AREPAs is diferent than the amount of the event because on each new deposit the contract automatically transfer the 
+      //pending AREPAs to the msg.sender
+      expect(finalBalanceOwner).to.equal("4430102996064794690232")
     });
   })
   

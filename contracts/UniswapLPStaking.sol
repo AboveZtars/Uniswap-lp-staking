@@ -116,11 +116,10 @@ contract UniswapLPStaking is OwnableUpgradeable {
     uint256 _amountA,
     uint256 _amountB
     ) public payable returns(uint256 liquidity){
-      address _token;
-    uint256 amountTokenDesired;
-    uint256 liquidityScope;
 
     if (msg.value > 0) {
+      address _token;
+      uint256 amountTokenDesired;
       if (_tokenA == WETH) {
         _token = _tokenB;
         amountTokenDesired = _amountB;
@@ -144,8 +143,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       IERC20Upgradeable(_token).safeApprove(ROUTER, amountTokenToLP);
       (, , uint256 liquidity) = uniswapRouterV2.addLiquidityETH{
         value: msg.value
-      }(_token, amountTokenToLP, 1, 1, address(this), block.timestamp);
-      liquidityScope = liquidity;
+      }(_token, amountTokenToLP, 1, 1, msg.sender, block.timestamp);
     } else {
       ///Specifying the right amount of tokens to send before add to the LP
       (uint256 amountAToLP, uint256 amountBToLP) = getAmountOfTokens(
@@ -190,11 +188,11 @@ contract UniswapLPStaking is OwnableUpgradeable {
     address pair = uniswapFactoryV2.getPair(_tokenA, _tokenB);
     require((pairPid[pair] != 0) || (pair == lpTokenPid0), "Pool not supported!");
     ///Liquidity
-    address _token;
-    uint256 amountTokenDesired;
     uint256 liquidityScope;
 
     if (msg.value > 0) {
+      address _token;
+      uint256 amountTokenDesired;
       if (_tokenA == WETH) {
         _token = _tokenB;
         amountTokenDesired = _amountB;
