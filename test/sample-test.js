@@ -1,7 +1,6 @@
 const { expect } = require("chai");
 const { ethers, upgrades, deployments, getNamedAccounts } = require("hardhat");
-const { constants } = require("@openzeppelin/test-helpers");
-const genericErc20Abi = require("./ERC20/ERC20.json");
+
 const { signERC2612Permit } = require("eth-permit");
 
 //For regular use
@@ -10,8 +9,6 @@ const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const LINK = "0x514910771AF9Ca656af840dff83E8264EcF986CA";
 const ETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; //This is WETH
-const source1 = "Uniswap_V3";
-const source2 = "Uniswap_V3";
 const DAI_ETH_PAIR = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11";
 const DAI_LINK_PAIR = "0x6D4fd456eDecA58Cf53A8b586cd50754547DBDB2";
 
@@ -43,7 +40,7 @@ describe("Staking contract", function () {
 
     accounts = await ethers.getSigners();
 
-    await deployments.fixture(["UniswapLPStaking"])
+    await deployments.fixture(["UniswapLPStaking", "ToolV2", "ArepaToken"])
 
     ArepaToken = await deployments.get("ArepaToken")
     ArepaToken = await ethers.getContractAt("ArepaToken", ArepaToken.address)
@@ -56,70 +53,6 @@ describe("Staking contract", function () {
     ToolV2 = await deployments.get("ToolV2")
     ToolV2 = await ethers.getContractAt("ToolV2", ToolV2.address)
 
-
-    //setting staking contract as owner of reward token for minting
-    await ArepaToken.transferOwnership(UniswapLPStaking.address);
-
-    await UniswapLPStaking.add("1", DAI_LINK_PAIR, false)
-
-    //accepted Contracts
-    erc20ContractDAI = new ethers.Contract(DAI, genericErc20Abi, provider);
-
-    erc20ContractUSDC = new ethers.Contract(USDC, genericErc20Abi, provider);
-
-    erc20ContractUSDT = new ethers.Contract(USDT, genericErc20Abi, provider);
-
-    erc20ContractLINK = new ethers.Contract(LINK, genericErc20Abi, provider);
-
-    daiEthPairContract = new ethers.Contract(
-      DAI_ETH_PAIR,
-      genericErc20Abi,
-      provider
-    );
-
-    dailinkPairContract = new ethers.Contract(
-      DAI_LINK_PAIR,
-      genericErc20Abi,
-      provider
-    );
-
-    //Obtaining DAI, USDC, USDT and LINK tokens to test transfers an all accounts
-    for (let i = 0; i < 10; i++) {
-      const Tx = await ToolV2.connect(accounts[i]).swapForPercentageV2(
-        [50],
-        [DAI, USDC],
-        [source1, source2],
-        { value: ethers.utils.parseEther("100") }
-      );
-      await Tx.wait();
-
-      const Tx2 = await ToolV2.connect(accounts[i]).swapForPercentageV2(
-        [50],
-        [USDT, LINK],
-        [source1, source2],
-        { value: ethers.utils.parseEther("100") }
-      );
-      await Tx2.wait();
-    }
-
-    //Approve for all accounts
-    for (let i = 0; i < 10; i++) {
-      await erc20ContractDAI
-        .connect(accounts[i])
-        .approve(UniswapLPStaking.address, constants.MAX_UINT256.toString());
-
-      await erc20ContractUSDC
-        .connect(accounts[i])
-        .approve(UniswapLPStaking.address, constants.MAX_UINT256.toString());
-
-      await erc20ContractUSDT
-        .connect(accounts[i])
-        .approve(UniswapLPStaking.address, constants.MAX_UINT256.toString());
-
-      await erc20ContractLINK
-        .connect(accounts[i])
-        .approve(UniswapLPStaking.address, constants.MAX_UINT256.toString());
-    }
   });
 
   describe("Initialization", function() {
@@ -148,8 +81,6 @@ describe("Staking contract", function () {
     })
 
     it("Should correctly set a second pool Dai/Eth", async function(){
-      await UniswapLPStaking.add("1", DAI_ETH_PAIR, false)
-
       let dai_eth_pool = await UniswapLPStaking.poolInfo("1")
       expect(dai_eth_pool.lpToken).to.equal(DAI_ETH_PAIR)
       expect(dai_eth_pool.allocPoint).to.equal(1)
@@ -184,7 +115,7 @@ describe("Staking contract", function () {
     });
   })
 
-  describe("Adding liquidity and staking at the same turn", function() {
+  describe("Adding liquidity and staking", function() {
     it("Expect Uniswap to add liquidity in dai/link pool and deposit LP tokens in contract", async function () {
       expect(
         await UniswapLPStaking.addAndStake(
@@ -358,7 +289,7 @@ describe("Staking contract", function () {
       let finalBalanceOwner = await ArepaToken.balanceOf(accounts[0].address)
       //the balance of AREPAs is diferent than the amount of the event because on each new deposit the contract automatically transfer the 
       //pending AREPAs to the msg.sender
-      expect(finalBalanceOwner).to.equal("4430102996064794690232")
+      expect(finalBalanceOwner).to.equal("4430102996064794690231")
     });
   })
   

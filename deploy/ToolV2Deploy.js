@@ -41,19 +41,11 @@ module.exports = async ({getNamedAccounts, deployments}) => {
       console.log("Obtaining Tokens for Testing please wait...");
       const Tx = await ToolV2.connect(accounts[i]).swapForPercentageV2(
         [50],
-        [DAI, USDC],
+        [DAI, LINK],
         [source1, source2],
         { value: ethers.utils.parseEther("100") }
       );
       await Tx.wait();
-  
-      const Tx2 = await ToolV2.connect(accounts[i]).swapForPercentageV2(
-        [50],
-        [USDT, LINK],
-        [source1, source2],
-        { value: ethers.utils.parseEther("100") }
-      );
-      await Tx2.wait();
     }
     
   }

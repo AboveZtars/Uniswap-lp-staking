@@ -79,6 +79,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   address public lpTokenPid0;
 
   //events
+  event LPTokens(uint amountLpTokens);
   event poolAdded(uint256 indexed allocation, address lpToken);
   event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
   event Withdraw(
@@ -115,7 +116,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
     address _tokenB,
     uint256 _amountA,
     uint256 _amountB
-    ) public payable returns(uint256 liquidity){
+    ) public payable{
 
     if (msg.value > 0) {
       address _token;
@@ -144,6 +145,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       (, , uint256 liquidity) = uniswapRouterV2.addLiquidityETH{
         value: msg.value
       }(_token, amountTokenToLP, 1, 1, msg.sender, block.timestamp);
+      emit LPTokens(liquidity);
     } else {
       ///Specifying the right amount of tokens to send before add to the LP
       (uint256 amountAToLP, uint256 amountBToLP) = getAmountOfTokens(
@@ -176,6 +178,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
         msg.sender,
         block.timestamp
       );
+      emit LPTokens(liquidity);
     } 
   }
   
@@ -252,7 +255,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       );
       liquidityScope = liquidity;
     }
-
+    emit LPTokens(liquidityScope);
     ///Stake
     deposit(pairPid[pair], liquidityScope, false);
   }
@@ -315,7 +318,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   }
 
   // Update the given pool's Arepa allocation point. Can only be called by the owner.
-  function set(
+  /* function set(
     uint256 _pid,
     uint256 _allocPoint,
     bool _withUpdate
@@ -327,7 +330,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
       _allocPoint
     );
     poolInfo[_pid].allocPoint = _allocPoint;
-  }
+  } */
 
   // Return reward multiplier over the given _from to _to block.
   function getMultiplier(uint256 _from, uint256 _to)
@@ -480,15 +483,6 @@ contract UniswapLPStaking is OwnableUpgradeable {
     emit Withdraw(msg.sender, _pid, _amount, pending);
   }
 
-  // Withdraw without caring about rewards. EMERGENCY ONLY.
-  function emergencyWithdraw(uint256 _pid) public {
-    PoolInfo storage pool = poolInfo[_pid];
-    UserInfo storage user = userInfo[_pid][msg.sender];
-    pool.lpToken.safeTransfer(address(msg.sender), user.amount);
-    emit EmergencyWithdraw(msg.sender, _pid, user.amount);
-    user.amount = 0;
-    user.rewardDebt = 0;
-  }
 
   // Safe Arepa transfer function, just in case if rounding error causes pool to not have enough Arepas.
   function safeArepaTransfer(address _to, uint256 _amount) internal {

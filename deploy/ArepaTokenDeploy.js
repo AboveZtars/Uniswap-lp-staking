@@ -1,3 +1,4 @@
+const UniswapLPStakingAddress = "0xFD471836031dc5108809D173A067e8486B9047A3"
 module.exports = async ({getNamedAccounts, deployments}) => {
   const {deploy} = deployments;
   const {deployer} = await getNamedAccounts();
@@ -6,5 +7,6 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     args:[],
     log: true,
   });
+
 };
 module.exports.tags = ['ArepaToken'];
