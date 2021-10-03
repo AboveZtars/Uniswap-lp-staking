@@ -20,41 +20,9 @@ import "./Library/UniswapV2Library.sol";
 ///Hardhat
 import "hardhat/console.sol";
 
+///@dev Upgradeable contract with ownable openzeppelin
+///@notice The contract have only two available pools to stake the LP tokens to keep the AREPA rewards the same
 contract UniswapLPStaking is OwnableUpgradeable {
-  using SafeMathUpgradeable for uint256;
-
-  using SafeERC20Upgradeable for IERC20Upgradeable;
-  address private constant FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-  address private constant ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-  address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-  IUniswapV2Router02 public constant uniswapRouterV2 =
-    IUniswapV2Router02(ROUTER);
-
-  IUniswapV2Factory public constant uniswapFactoryV2 =
-    IUniswapV2Factory(FACTORY);
-
-  struct UserInfo {
-    uint256 amount; // How many LP tokens the user has provided.
-    uint256 rewardDebt; // Reward debt. See explanation below.
-    //
-    // We do some fancy math here. Basically, any point in time, the amount of Arepas
-    // entitled to a user but is pending to be distributed is:
-    //
-    //   pending reward = (user.amount * pool.accArepaPerShare) - user.rewardDebt
-    //
-    // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-    //   1. The pool's `accArepaPerShare` (and `lastRewardBlock`) gets updated.
-    //   2. User receives the pending reward sent to his/her address.
-    //   3. User's `amount` gets updated.
-    //   4. User's `rewardDebt` gets updated.
-  }
-  // Info of each pool.
-  struct PoolInfo {
-    IERC20Upgradeable lpToken; // Address of LP token contract.
-    uint256 allocPoint; // How many allocation points assigned to this pool. Arepas to distribute per block.
-    uint256 lastRewardBlock; // Last block number that Arepas distribution occurs.
-    uint256 accArepaPerShare; // Accumulated Arepas per share, times 1e12. See below.
-  }
   // The Arepa TOKEN!
   ArepaToken public arepa;
   // Dev address.
@@ -78,22 +46,79 @@ contract UniswapLPStaking is OwnableUpgradeable {
   // First lp token
   address public lpTokenPid0;
 
+  struct UserInfo {
+    uint256 amount; // How many LP tokens the user has provided.
+    uint256 rewardDebt; // Reward debt. See explanation below.
+    //
+    // We do some fancy math here. Basically, any point in time, the amount of Arepas
+    // entitled to a user but is pending to be distributed is:
+    //
+    //   pending reward = (user.amount * pool.accArepaPerShare) - user.rewardDebt
+    //
+    // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
+    //   1. The pool's `accArepaPerShare` (and `lastRewardBlock`) gets updated.
+    //   2. User receives the pending reward sent to his/her address.
+    //   3. User's `amount` gets updated.
+    //   4. User's `rewardDebt` gets updated.
+  }
+  // Info of each pool.
+  struct PoolInfo {
+    IERC20Upgradeable lpToken; // Address of LP token contract.
+    uint256 allocPoint; // How many allocation points assigned to this pool. Arepas to distribute per block.
+    uint256 lastRewardBlock; // Last block number that Arepas distribution occurs.
+    uint256 accArepaPerShare; // Accumulated Arepas per share, times 1e12. See below.
+  }
+  
+
   //events
+  ///@param amountLpTokens the amount of tokens that the user receives when adding liquidity
   event LPTokens(uint amountLpTokens);
+
+  ///@param allocation the "place" to store the pool
+  ///@param lpToken the address of the LP token 
   event poolAdded(uint256 indexed allocation, address lpToken);
+
+  ///@param user the person that makes the deposit
+  ///@param pid the pool id
+  ///@param amount the amount of LP tokens deposited
   event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
+
+  ///@param user the person that makes the deposit
+  ///@param pid the pool id
+  ///@param amount the amount of LP tokens deposited
+  ///@param pending THE AMOUNT OF PENDING REWARDS????? <---------------------------
   event Withdraw(
     address indexed user,
     uint256 indexed pid,
     uint256 amount,
     uint256 pending
   );
+  ///@param user the person that makes the deposit
+  ///@param pid the pool id
+  ///@param amount the amount of LP tokens deposited
   event EmergencyWithdraw(
     address indexed user,
     uint256 indexed pid,
     uint256 amount
   );
 
+  ///Libraries
+  using SafeMathUpgradeable for uint256;
+  using SafeERC20Upgradeable for IERC20Upgradeable;
+  ///Constants
+  address private constant FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+  address private constant ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+  address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+  IUniswapV2Router02 public constant uniswapRouterV2 =
+    IUniswapV2Router02(ROUTER);
+  IUniswapV2Factory public constant uniswapFactoryV2 =
+    IUniswapV2Factory(FACTORY);
+
+  ///@param _arepa The reward token
+  ///@param _devaddr The developer address
+  ///@param _arepaPerBlock Amount of Arepas reward per block
+  ///@param __startBlock STARTBLOCK??? <-----------------------------------
+  ///@param _bonusEndBlock ENDBLOCK??? <-----------------------------------
   function initialize(
     ArepaToken _arepa,
     address _devaddr,
@@ -111,6 +136,11 @@ contract UniswapLPStaking is OwnableUpgradeable {
   }
 
   ///Main functions
+  ///@param _tokenA The Token A to add Liquidity
+  ///@param _tokenB The Token B to add Liquidity
+  ///@param _amountA The amount of Token A
+  ///@param _amountB The amount of Token B
+  ///@dev The function adds the liquidity to UNISWAP and send the LP tokens to the msg.sender
   function addLiquidityOnly(
     address _tokenA,
     address _tokenB,
@@ -182,6 +212,12 @@ contract UniswapLPStaking is OwnableUpgradeable {
     } 
   }
   
+  ///@param _tokenA The Token A to add Liquidity
+  ///@param _tokenB The Token B to add Liquidity
+  ///@param _amountA The amount of Token A
+  ///@param _amountB The amount of Token B
+  ///@dev The function first transfer the tokens to the contract and then it makes the swap, after that it stakes the LP token received from UNISWAP
+  ///@dev Works with ETH, DAI and LINK.
   function addAndStake(
     address _tokenA,
     address _tokenB,
@@ -259,7 +295,11 @@ contract UniswapLPStaking is OwnableUpgradeable {
     ///Stake
     deposit(pairPid[pair], liquidityScope, false);
   }
-
+  ///@param _tokenA The Token A to add Liquidity
+  ///@param _tokenB The Token B to add Liquidity
+  ///@param _amountA The amount of Token A
+  ///@param _amountB The amount of Token B
+  ///@dev This function gives the amount of LP tokens when adding an amount of tokens to a pool in UNISWAP
   function getAmountOfTokens(
     address _tokenA,
     address _tokenB,
