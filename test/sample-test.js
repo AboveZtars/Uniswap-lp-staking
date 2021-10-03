@@ -262,8 +262,7 @@ describe("Staking contract", function () {
           result.deadline,
           result.v,
           result.r,
-          result.s,
-          true
+          result.s
         )
       )
         .to.emit(UniswapLPStaking, "Deposit")

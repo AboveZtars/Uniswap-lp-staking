@@ -86,7 +86,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
   ///@param user the person that makes the deposit
   ///@param pid the pool id
   ///@param amount the amount of LP tokens deposited
-  ///@param pending THE AMOUNT OF PENDING REWARDS????? <---------------------------
+  ///@param pending the amount arepa tokens paid to user
   event Withdraw(
     address indexed user,
     uint256 indexed pid,
@@ -117,8 +117,8 @@ contract UniswapLPStaking is OwnableUpgradeable {
   ///@param _arepa The reward token
   ///@param _devaddr The developer address
   ///@param _arepaPerBlock Amount of Arepas reward per block
-  ///@param __startBlock STARTBLOCK??? <-----------------------------------
-  ///@param _bonusEndBlock ENDBLOCK??? <-----------------------------------
+  ///@param _startBlock Starting block for AREPA token mining
+  ///@param _bonusEndBlock Ending block for bonus Arepa rewards period (see BONUS_MULTIPLIER variable and getMultiplier function)
   function initialize(
     ArepaToken _arepa,
     address _devaddr,
@@ -323,13 +323,18 @@ contract UniswapLPStaking is OwnableUpgradeable {
     }
   }
 
-  ////STAKING PART / Arepaswap masterchef fork
+  ////STAKING PART / Sushiswap masterchef fork
+
+  ///@notice amount of pools in the contract available for staking
   function poolLength() public view returns (uint256) {
     return poolInfo.length;
   }
 
-  // Add a new lp to the pool. Can only be called by the owner.
-  // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
+  ///@param _allocPoint allocation points for the pool
+  ///@param _lpToken address of liquidity pool token
+  ///@param _withUpdate update all the rest of pools 
+  ///@notice Add a new lp to the pool. Can only be called by the owner.
+  ///@dev DO NOT add the same LP token more than once. Rewards will be messed up if you do.
   function add(
     uint256 _allocPoint,
     IERC20Upgradeable _lpToken,
@@ -357,6 +362,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
     emit poolAdded(_allocPoint , address(_lpToken));
   }
 
+
   // Update the given pool's Arepa allocation point. Can only be called by the owner.
   /* function set(
     uint256 _pid,
@@ -372,7 +378,10 @@ contract UniswapLPStaking is OwnableUpgradeable {
     poolInfo[_pid].allocPoint = _allocPoint;
   } */
 
-  // Return reward multiplier over the given _from to _to block.
+  ///@param _from starting block
+  ///@param _to ending block
+  ///@notice Return reward multiplier over the given _from to _to block.
+  ///@dev checks for bonusEndBlock to multiply the BONUS_MULTIPLIER to the apropiate blocks
   function getMultiplier(uint256 _from, uint256 _to)
     public
     view
@@ -390,7 +399,9 @@ contract UniswapLPStaking is OwnableUpgradeable {
     }
   }
 
-  // View function to see pending Arepas on frontend.
+  ///@param _pid pool ID
+  ///@param _user address of the user 
+  ///@notice View function to see pending Arepas on frontend.
   function pendingArepa(uint256 _pid, address _user)
     external
     view
@@ -413,7 +424,8 @@ contract UniswapLPStaking is OwnableUpgradeable {
     return user.amount.mul(accArepaPerShare).div(1e12).sub(user.rewardDebt);
   }
 
-  // Update reward variables for all pools. Be careful of gas spending!
+
+  ///@notice Update reward variables for all pools. Be careful of gas spending!
   function massUpdatePools() public {
     uint256 length = poolInfo.length;
     for (uint256 pid = 0; pid < length; ++pid) {
@@ -421,7 +433,10 @@ contract UniswapLPStaking is OwnableUpgradeable {
     }
   }
 
-  // Update reward variables of the given pool to be up-to-date.
+  ///@param _pid pool ID 
+  ///@notice Update reward variables of the given pool to be up-to-date.
+  ///@dev This function keeps the contract supplied of AREPA tokens for the payment of rewards by minting them.
+  ///@dev In theory this is the function were it should be add a functionality to mint to a feecollector or owner.
   function updatePool(uint256 _pid) public {
     PoolInfo storage pool = poolInfo[_pid];
     if (block.number <= pool.lastRewardBlock) {
@@ -444,7 +459,11 @@ contract UniswapLPStaking is OwnableUpgradeable {
     pool.lastRewardBlock = block.number;
   }
 
-  // Deposit LP tokens to MasterChef for Arepa allocation.
+  ///@param _pid pool ID 
+  ///@param _amount amount of LP tokens to deposit 
+  ///@param transfer the tokens are being transfered (staking only) or are already in the contract's posession (see addAndStake)
+  ///@notice Deposit LP tokens to MasterChef for Arepa allocation.
+  ///@dev tokens must be approve before calling this function.
   function deposit(
     uint256 _pid,
     uint256 _amount,
@@ -471,6 +490,12 @@ contract UniswapLPStaking is OwnableUpgradeable {
     emit Deposit(msg.sender, _pid, _amount);
   }
 
+  ///@param _pid pool ID
+  ///@param _amount amount of LP tokens to deposit 
+  ///@param _deadline limit time to validate the permit
+  ///@param _v component of the signature's hash message for the permit
+  ///@param _r component of the signature's hash message for the permit
+  ///@param _s component of the signature's hash message for the permit
   // Deposit LP tokens to MasterChef for Arepa allocation with permit functionality.
   function depositWithPermit(
     uint256 _pid,
@@ -478,8 +503,7 @@ contract UniswapLPStaking is OwnableUpgradeable {
     uint256 _deadline,
     uint8 _v,
     bytes32 _r,
-    bytes32 _s,
-    bool transfer
+    bytes32 _s
   ) public {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][msg.sender];
@@ -490,7 +514,6 @@ contract UniswapLPStaking is OwnableUpgradeable {
       );
       safeArepaTransfer(msg.sender, pending);
     }
-    if (transfer) {
     IUniswapV2Pair(address(pool.lpToken)).permit(
       msg.sender,
       address(this),
@@ -501,13 +524,15 @@ contract UniswapLPStaking is OwnableUpgradeable {
       _s
     );
     pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-    }
     user.amount = user.amount.add(_amount);
     user.rewardDebt = user.amount.mul(pool.accArepaPerShare).div(1e12);
     emit Deposit(msg.sender, _pid, _amount);
   }
 
-  // Withdraw LP tokens from MasterChef.
+  ///@param _pid pool ID
+  ///@param _amount amount of LP tokens to withdraw 
+  ///@notice Withdraw LP tokens from staking contract.
+  ///@dev rewards are calculated and sent to the user in the same transaction
   function withdraw(uint256 _pid, uint256 _amount) public {
     PoolInfo storage pool = poolInfo[_pid];
     UserInfo storage user = userInfo[_pid][msg.sender];
@@ -523,8 +548,9 @@ contract UniswapLPStaking is OwnableUpgradeable {
     emit Withdraw(msg.sender, _pid, _amount, pending);
   }
 
-
-  // Safe Arepa transfer function, just in case if rounding error causes pool to not have enough Arepas.
+  ///@param _to receiver address of the AREPA tokens
+  ///@param _amount amount of AREPA tokens to send
+  ///@notice Safe Arepa transfer function, just in case if rounding error causes pool to not have enough Arepas.
   function safeArepaTransfer(address _to, uint256 _amount) internal {
     uint256 ArepaBal = arepa.balanceOf(address(this));
     if (_amount > ArepaBal) {
@@ -534,11 +560,13 @@ contract UniswapLPStaking is OwnableUpgradeable {
     }
   }
 
-  // Update dev address by the previous dev.
+  ///@param _devaddr developer address 
+  ///@notice Update dev address by the previous dev.
   function dev(address _devaddr) public {
     require(msg.sender == devaddr, "dev: wut?");
     devaddr = _devaddr;
   }
 
+  ///@notice fallback function
   receive() external payable {}
 }
