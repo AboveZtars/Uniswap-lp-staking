@@ -281,7 +281,7 @@ describe("Staking contract", function () {
         accounts[0].address,
         "1",
         ethers.utils.parseUnits("100"),
-        "999999999999895032157"
+        "999999999999895032158"
       );
       let lpTokenbalance = await daiEthPairContract.balanceOf(accounts[0].address)
       expect(lpTokenbalance).to.equal(ethers.utils.parseUnits("100"))
