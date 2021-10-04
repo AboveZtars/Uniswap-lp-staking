@@ -88,7 +88,7 @@
           {
             "contract": "UniswapLPStaking",
             "label": "sushi",
-            "type": "t_contract(ArepaToken)3292",
+            "type": "t_contract(ArepaToken)3406",
             "src": "contracts\\UniswapLPStaking.sol:61"
           },
           {
@@ -112,7 +112,7 @@
           {
             "contract": "UniswapLPStaking",
             "label": "poolInfo",
-            "type": "t_array(t_struct(PoolInfo)3913_storage)dyn_storage",
+            "type": "t_array(t_struct(PoolInfo)4227_storage)dyn_storage",
             "src": "contracts\\UniswapLPStaking.sol:71"
           },
           {
@@ -124,7 +124,7 @@
           {
             "contract": "UniswapLPStaking",
             "label": "userInfo",
-            "type": "t_mapping(t_uint256,t_mapping(t_address,t_struct(UserInfo)3903_storage))",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_struct(UserInfo)4217_storage))",
             "src": "contracts\\UniswapLPStaking.sol:75"
           },
           {
@@ -147,7 +147,7 @@
           }
         ],
         "types": {
-          "t_contract(ArepaToken)3292": {
+          "t_contract(ArepaToken)3406": {
             "label": "contract ArepaToken"
           },
           "t_address": {
@@ -156,10 +156,10 @@
           "t_uint256": {
             "label": "uint256"
           },
-          "t_array(t_struct(PoolInfo)3913_storage)dyn_storage": {
+          "t_array(t_struct(PoolInfo)4227_storage)dyn_storage": {
             "label": "struct UniswapLPStaking.PoolInfo[]"
           },
-          "t_struct(PoolInfo)3913_storage": {
+          "t_struct(PoolInfo)4227_storage": {
             "label": "struct UniswapLPStaking.PoolInfo",
             "members": [
               {
@@ -186,13 +186,13 @@
           "t_mapping(t_address,t_uint256)": {
             "label": "mapping(address => uint256)"
           },
-          "t_mapping(t_uint256,t_mapping(t_address,t_struct(UserInfo)3903_storage))": {
+          "t_mapping(t_uint256,t_mapping(t_address,t_struct(UserInfo)4217_storage))": {
             "label": "mapping(uint256 => mapping(address => struct UniswapLPStaking.UserInfo))"
           },
-          "t_mapping(t_address,t_struct(UserInfo)3903_storage)": {
+          "t_mapping(t_address,t_struct(UserInfo)4217_storage)": {
             "label": "mapping(address => struct UniswapLPStaking.UserInfo)"
           },
-          "t_struct(UserInfo)3903_storage": {
+          "t_struct(UserInfo)4217_storage": {
             "label": "struct UniswapLPStaking.UserInfo",
             "members": [
               {
