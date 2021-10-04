@@ -276,13 +276,8 @@ describe("Staking contract", function () {
       expect(
         await UniswapLPStaking.withdraw("1", ethers.utils.parseUnits("100.0", 18))
       )
-      .to.emit(UniswapLPStaking, "Withdraw")
-      .withArgs(
-        accounts[0].address,
-        "1",
-        ethers.utils.parseUnits("100"),
-        "999999999999895032158"
-      );
+      .to.emit(UniswapLPStaking, "Withdraw");
+      
       let lpTokenbalance = await daiEthPairContract.balanceOf(accounts[0].address)
       expect(lpTokenbalance).to.equal(ethers.utils.parseUnits("100"))
       let finalBalanceOwner = await ArepaToken.balanceOf(accounts[0].address)
