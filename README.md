@@ -1,6 +1,6 @@
 # Uniswap LP Staking
 
-This is the Fourth Assignment for EYSS Academy.
+Staking contract using masterchef
 
 ## Before test
 
